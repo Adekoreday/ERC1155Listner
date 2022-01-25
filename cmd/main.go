@@ -5,19 +5,23 @@ import (
 	"unchain/configs"
 	"unchain/internal/routes"
 	"unchain/internal/transaction"
+	"unchain/internal/middlewares"
 	"net/http"
-
+	
 	"github.com/gorilla/mux"
 )
 
 func main() {
 	router := mux.NewRouter()
-
+    router.Use(common.CommonMiddleware)
 	//run database
 	configs.ConnectDB()
-    transaction.Listen();
+
+	go 	 transaction.Listen();
 	//routes
 	routes.Transaction(router) //add this
 
-	log.Fatal(http.ListenAndServe(":8000", router))
+	go log.Fatal(http.ListenAndServe(":8000", router))
+
+
 }
