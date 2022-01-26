@@ -2,8 +2,7 @@ package transaction
 
 import (
     "context"
-    "fmt"
-    "log"
+	log "github.com/sirupsen/logrus"
     "math/big"
     "strings"
     "time"
@@ -72,24 +71,21 @@ func Listen () {
     logTransferSigHash := crypto.Keccak256Hash(logTransferSig)
     logTransferBatchSigHash := crypto.Keccak256Hash(logTransferBatchSig)
 
-	fmt.Println(logTransferSigHash.Hex())
-	fmt.Println(logTransferBatchSigHash.Hex())
 	for {
         select {
         case err := <-sub.Err():
             log.Fatal(err)
         case vLog := <-logs:
-        fmt.Println(vLog) // pointer to event log
-		fmt.Println(vLog.Topics[0].Hex())
 		switch vLog.Topics[0].Hex() {
         case logTransferSigHash.Hex():
-            fmt.Printf("Log Name: Transfer\n")
 
             var transferSingleEvent LogTransferSingle
 
              err := contractAbi.UnpackIntoInterface(&transferSingleEvent, "TransferSingle", vLog.Data)
             if err != nil {
-                log.Fatal(err)
+                log.WithFields(log.Fields{
+                    "error": err,
+                  }).Fatal("could not unpack contract Abi")
             }
 
             transferSingleEvent.From = common.HexToAddress(vLog.Topics[2].Hex())
@@ -98,13 +94,17 @@ func Listen () {
            // find the balance of sender
             senderBal, err := instance.BalanceOf(&bind.CallOpts{}, transferSingleEvent.From, transferSingleEvent.Id )
             if err != nil {
-                fmt.Printf("Err: %s\n", err)
+                log.WithFields(log.Fields{
+                    "error": err,
+                  }).Info("could not obtain sender balance")
             }
 
             // find the balance of the receiver
             receiverBal, err := instance.BalanceOf(&bind.CallOpts{}, transferSingleEvent.To, transferSingleEvent.Id )
             if err != nil {
-                fmt.Printf("Err: %s\n", err)
+                log.WithFields(log.Fields{
+                    "error": err,
+                  }).Info("could not obtain receivers balance")
             }
 
             newTransaction := models.Transaction {
@@ -123,29 +123,35 @@ func Listen () {
             result, err := transactionCollection.InsertOne(ctx, newTransaction);
 
             if err != nil {
-                fmt.Printf("Err: %s\n", err)
+                log.WithFields(log.Fields{
+                    "error": err,
+                  }).Info("error saving to mongodb")
             }
 
-            fmt.Printf("Operator: %s\n", transferSingleEvent.Operator.Hex())
-            fmt.Printf("From: %s\n", transferSingleEvent.From.Hex())
-			fmt.Printf("To: %s\n", transferSingleEvent.To.Hex())
-            fmt.Printf("Tokens: %s\n", transferSingleEvent.Tokens.String())
-            fmt.Printf("Result: %s\n", result)
+            log.WithFields(log.Fields{
+                "From": transferSingleEvent.From.Hex(),
+                "To": transferSingleEvent.To.Hex(),
+                "Tokens": transferSingleEvent.Tokens,
+                "SenderBal": senderBal.String(),
+                "ReceiverBal": receiverBal.String(),
+                "result": result,
+              }).Info("new transaction parsed")
+
+        // Didnt completely handle the batch transfer logging
         case logTransferBatchSigHash.Hex():
-            fmt.Printf("Log Name: Batch Transfer\n")
 
             var transferBatchEvent LogTransferBatch
 
              err := contractAbi.UnpackIntoInterface(&transferBatchEvent, "TransferBatch", vLog.Data)
             if err != nil {
-                log.Fatal(err)
+                log.WithFields(log.Fields{
+                    "error": err,
+                  }).Fatal("could not unpack contract Abi")
             }
             //transferBatchEvent
             transferBatchEvent.Operator = common.HexToAddress(vLog.Topics[1].Hex())
             transferBatchEvent.From = common.HexToAddress(vLog.Topics[2].Hex())
             transferBatchEvent.To = common.HexToAddress(vLog.Topics[3].Hex())
-            fmt.Printf("From: %s\n", transferBatchEvent.From)
-            fmt.Printf("To: %s\n", transferBatchEvent.To)
         }
       }
     }
