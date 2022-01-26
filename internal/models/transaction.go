@@ -4,10 +4,10 @@ import (
 )
 
 type Transaction struct {
-	TokenId    string             `json:"tokenId,omitempty" validate:"required"`
-	Sender     string             `json:"sender,omitempty" validate:"required"`
-	Receiver string             `json:"receiver,omitempty" validate:"required"`
-	Token    string             `json:"token,omitempty" validate:"required"`
-	Operator string          `json:"operator,omitempty" validate:"required"`
-	CreatedAt time.Time      `json:"createdAt"`
+	TokenId    string             `bson:"tokenId,omitempty" validate:"required"`
+	Sender     string             `bson:"sender,omitempty" validate:"required"`
+	Receiver string             `bson:"receiver,omitempty" validate:"required"`
+	Token    string             `bson:"token,omitempty" validate:"required"`
+	Operator string          `bson:"operator,omitempty" validate:"required"`
+	CreatedAt time.Time      `bson:"createdAt"`
 }
