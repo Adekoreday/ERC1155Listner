@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"log"
 	"unchain/configs"
 	"unchain/internal/response"
 	"net/http"
@@ -55,15 +54,16 @@ func GetTransactions() http.HandlerFunc {
 		for curr.Next(ctx) {
 			var elem models.Transaction
 			err := curr.Decode(&elem)
-			if err != nil {
-				log.Fatal(err)
+			if err == nil {
+				results = append(results, &elem)
 			}
-	
-			results = append(results, &elem)
 		} 
 
 		if err != nil {
-			log.Fatal(err)
+			rw.WriteHeader(http.StatusNotFound)
+			response := responses.TransactionResponse{Status: http.StatusNotFound, Message: "no data", Data: map[string]interface{}{"data": nil}}
+			json.NewEncoder(rw).Encode(response)
+			return
 		}
 
 		rw.WriteHeader(http.StatusOK)
