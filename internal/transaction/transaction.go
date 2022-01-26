@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
     "github.com/ethereum/go-ethereum/core/types"
     "github.com/ethereum/go-ethereum/ethclient"
+    "github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
 type LogTransferSingle struct {
@@ -48,6 +49,11 @@ func Listen () {
 	contractAddress := common.HexToAddress(configs.SmartContractAdd())
     query := ethereum.FilterQuery{
         Addresses: []common.Address{contractAddress},
+    }
+
+    instance, err := token.NewToken(contractAddress, client)
+    if err != nil {
+        log.Fatal(err)
     }
 
 	logs := make(chan types.Log)
@@ -85,16 +91,28 @@ func Listen () {
             if err != nil {
                 log.Fatal(err)
             }
-            
-            transferSingleEvent.Operator = common.HexToAddress(vLog.Topics[1].Hex())
+
             transferSingleEvent.From = common.HexToAddress(vLog.Topics[2].Hex())
             transferSingleEvent.To = common.HexToAddress(vLog.Topics[3].Hex())
 
+           // find the balance of sender
+            senderBal, err := instance.BalanceOf(&bind.CallOpts{}, transferSingleEvent.From, transferSingleEvent.Id )
+            if err != nil {
+                fmt.Printf("Err: %s\n", err)
+            }
+
+            // find the balance of the receiver
+            receiverBal, err := instance.BalanceOf(&bind.CallOpts{}, transferSingleEvent.To, transferSingleEvent.Id )
+            if err != nil {
+                fmt.Printf("Err: %s\n", err)
+            }
+
             newTransaction := models.Transaction {
                 TokenId:  transferSingleEvent.Id.String(),
-                Operator: transferSingleEvent.Operator.Hex(),
                 Sender:   transferSingleEvent.From.Hex(),
                 Receiver: transferSingleEvent.To.Hex(),
+                SenderBal: senderBal.String(),
+                ReceiverBal: receiverBal.String(),
                 Token:    transferSingleEvent.Tokens.String(), 
                 CreatedAt: time.Now(),
             }
