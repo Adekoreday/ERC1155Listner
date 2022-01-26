@@ -8,6 +8,7 @@ type Transaction struct {
 	Sender     string             `bson:"sender,omitempty" validate:"required"`
 	Receiver string             `bson:"receiver,omitempty" validate:"required"`
 	Token    string             `bson:"token,omitempty" validate:"required"`
-	Operator string          `bson:"operator,omitempty" validate:"required"`
+	SenderBal string         `bson:"senderbal,omitempty" validate:"required"`
+	ReceiverBal string       `bson:"receiverbal,omitempty" validate:"required"`
 	CreatedAt time.Time      `bson:"createdAt"`
 }
