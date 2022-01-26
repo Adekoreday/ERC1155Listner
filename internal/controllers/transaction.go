@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"unchain/internal/models"
 	"context"
-	"fmt"
 	"time"
+	"strconv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var transactionCollection *mongo.Collection = configs.GetCollection(configs.DB, "transaction")
@@ -21,13 +23,34 @@ func GetTransactions() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		var results []*models.Transaction
-	//	var findQuery []bson.M
+		findQuery := make(bson.D, 2)
+
+		opts := options.Find().SetLimit(100)
+
+		if r.URL.Query().Get("createdAt") != "" {
+            str := r.URL.Query().Get("createdAt")
+            t, err := time.Parse(time.RFC3339, str)
+			if err== nil {
+				findQuery = append(findQuery, bson.E{"createdAt", bson.M{"$gte": primitive.NewDateTimeFromTime(t)}})
+			}
+		}
+
 		if r.URL.Query().Get("sender") != "" {
-			fmt.Printf(`this is the value %s\n`, r.URL.Query().Get("sender"))
-			
+			findQuery = append(findQuery, bson.E{"sender", r.URL.Query().Get("sender")})
+		}
+
+		if r.URL.Query().Get("receiver") != "" {
+			findQuery = append(findQuery, bson.E{"receiver", r.URL.Query().Get("receiver")})
+		}
+
+		if r.URL.Query().Get("limit") != "" {
+			intVar, err := strconv.ParseInt(r.URL.Query().Get("limit"), 10, 64)
+			if err == nil {
+				opts = options.Find().SetLimit(intVar)
+			}
 		}
 		defer cancel()
-        curr, err := transactionCollection.Find(ctx, bson.D{{}})
+        curr, err := transactionCollection.Find(ctx, findQuery, opts)
 		
 		for curr.Next(ctx) {
 			var elem models.Transaction
