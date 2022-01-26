@@ -60,8 +60,15 @@ func GetTransactions() http.HandlerFunc {
 		} 
 
 		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			response := responses.TransactionResponse{Status: http.StatusInternalServerError, Message: "server currently could not process your request", Data: map[string]interface{}{"data": nil}}
+			json.NewEncoder(rw).Encode(response)
+			return
+		}
+
+		if results == nil {
 			rw.WriteHeader(http.StatusNotFound)
-			response := responses.TransactionResponse{Status: http.StatusNotFound, Message: "no data", Data: map[string]interface{}{"data": nil}}
+			response := responses.TransactionResponse{Status: http.StatusNotFound, Message: "transaction not found ", Data: map[string]interface{}{"data": results}}
 			json.NewEncoder(rw).Encode(response)
 			return
 		}
